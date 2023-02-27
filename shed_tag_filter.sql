@@ -18,23 +18,23 @@ WHERE (n > 20000 AND days > 20); -- only get tagcode + general location when the
 -- NOTE: remove #tmp_table1 here
 DROP TABLE #tmp_table1;
 
--- -- 2. Record information for shed tags identified in step 1. IMPORTANT NOTE: This step may not be necessary.
--- BEGIN TRANSACTION
--- INSERT INTO shed_tags (TagCode, general_location, n, max, min, days)
--- SELECT TagCode, general_location, n, max, min, days
--- FROM #tmp_table2
--- WHERE NOT EXISTS(
---     SELECT 1
---     FROM shed_tags
---     WHERE shed_tags.TagCode = #tmp_table2.TagCode
---     AND shed_tags.general_location = #tmp_table2.general_location
---     AND shed_tags.n = #tmp_table2.n
---     AND shed_tags.max = #tmp_table2.[max]
--- )
--- OPTION(USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'))
--- COMMIT TRANSACTION;
+-- 2. Record information for shed tags identified in step 1. IMPORTANT NOTE: This step may not be necessary --------------------------
+BEGIN TRANSACTION
+INSERT INTO shed_tags (TagCode, general_location, n, max, min, days)
+SELECT TagCode, general_location, n, max, min, days
+FROM #tmp_table2
+WHERE NOT EXISTS(
+    SELECT 1
+    FROM shed_tags
+    WHERE shed_tags.TagCode = #tmp_table2.TagCode
+    AND shed_tags.general_location = #tmp_table2.general_location
+    AND shed_tags.n = #tmp_table2.n
+    AND shed_tags.max = #tmp_table2.[max]
+)
+OPTION(USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'))
+COMMIT TRANSACTION;
 
--- 2. Get all of the detections for shed tags identified in #tmp_table2 and insert into a temporary table (~6 sec runtime) -----------
+-- 3. Get all of the detections for shed tags identified in #tmp_table2 and insert into a temporary table (~6 sec runtime) -----------
 SELECT recv_ID, TagCode, DateTime_Orig, DateTime_PST, Temp, filename, general_location 
 INTO #tmp_table3
 FROM detects_with_locations d
@@ -48,7 +48,7 @@ WHERE EXISTS(
 -- DROP temporary table 2
 DROP TABLE #tmp_table2;
 
--- 3. Save the first 1000 detections for a shed tag code (<1 sec runtime) ------------------------------------------------------------
+-- 4. Save the first 1000 detections for a shed tag code (<1 sec runtime) ------------------------------------------------------------
 WITH add_row_number AS (
     SELECT *, ROW_NUMBER() OVER(PARTITION BY TagCode ORDER BY DateTime_PST) AS row_number
     FROM #tmp_table3
@@ -58,7 +58,7 @@ INTO #tmp_table4
 FROM add_row_number
 WHERE row_number < 1001;
 
--- 4. Remove all shed tag detections (~2 min runtime with shed tag code) -------------------------------------------------------------
+-- 5. Remove all shed tag detections (~2 min runtime with shed tag code) -------------------------------------------------------------
 UPDATE detects_tmp
 SET shed_tag = 'Y'
 WHERE EXISTS(
