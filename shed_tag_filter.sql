@@ -46,7 +46,7 @@ WHERE EXISTS(
 );
 
 -- DROP temporary table 2
-DROP TABLE #tmp_table2
+DROP TABLE #tmp_table2;
 
 -- 3. Save the first 1000 detections for a shed tag code (<1 sec runtime) ------------------------------------------------------------
 WITH add_row_number AS (
@@ -56,7 +56,7 @@ WITH add_row_number AS (
 SELECT recv_ID, TagCode, DateTime_Orig, DateTime_PST, Temp, filename, general_location, row_number
 INTO #tmp_table4
 FROM add_row_number
-WHERE row_number < 1001
+WHERE row_number < 1001;
 
 -- 4. Remove all shed tag detections (~2 min runtime with shed tag code) -------------------------------------------------------------
 UPDATE detects_tmp
@@ -78,8 +78,8 @@ SELECT recv_ID, TagCode, DateTime_Orig, DateTime_PST, Temp, filename
 FROM #tmp_table4 tmp;
 
 -- Drop temporary tables
-DROP TABLE #tmp_table3
-DROP TABLE #tmp_table4
+DROP TABLE #tmp_table3;
+DROP TABLE #tmp_table4;
 
 -- -- EXTRA CODE USED FOR TESTING
 -- -- replace rows that were removed during testing
